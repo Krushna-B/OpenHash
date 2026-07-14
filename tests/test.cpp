@@ -1,10 +1,15 @@
+#include "kv_store.hpp"
+#include "kv_store_open.hpp"
+#include "gtest/gtest.h"
 #include <gtest/gtest.h>
 #include <string>
 
-#include "kv_store.hpp"
+template <typename T> class KVStoreTest : public testing::Test {};
+using StoreTypes = testing::Types<KVStore, KVStoreOpen>;
+TYPED_TEST_SUITE(KVStoreTest, StoreTypes);
 
-TEST(KVStoreTest, SetGetRoundtrip) {
-  KVStore store(16);
+TYPED_TEST(KVStoreTest, SetGetRoundtrip) {
+  TypeParam store(16);
   std::string out;
 
   store.set("dog", "woof");
@@ -12,15 +17,15 @@ TEST(KVStoreTest, SetGetRoundtrip) {
   EXPECT_EQ(out, "woof");
 }
 
-TEST(KVStoreTest, MissingKey) {
-  KVStore store(16);
+TYPED_TEST(KVStoreTest, MissingKey) {
+  TypeParam store(16);
   std::string out;
 
   EXPECT_FALSE(store.get("cat", out));
 }
 
-TEST(KVStoreTest, OverwriteNotDuplicate) {
-  KVStore store(16);
+TYPED_TEST(KVStoreTest, OverwriteNotDuplicate) {
+  TypeParam store(16);
   std::string out;
 
   store.set("dog", "woof");
@@ -30,8 +35,8 @@ TEST(KVStoreTest, OverwriteNotDuplicate) {
   EXPECT_EQ(store.size(), 1u);
 }
 
-TEST(KVStoreTest, Delete) {
-  KVStore store(16);
+TYPED_TEST(KVStoreTest, Delete) {
+  TypeParam store(16);
   std::string out;
 
   store.set("dog", "woof");
@@ -40,14 +45,14 @@ TEST(KVStoreTest, Delete) {
   EXPECT_EQ(store.size(), 0u);
 }
 
-TEST(KVStoreTest, DeleteMissing) {
-  KVStore store(16);
+TYPED_TEST(KVStoreTest, DeleteMissing) {
+  TypeParam store(16);
 
   EXPECT_FALSE(store.del("dog"));
 }
 
-TEST(KVStoreTest, SurvivesResize) {
-  KVStore store(16);
+TYPED_TEST(KVStoreTest, SurvivesResize) {
+  TypeParam store(16);
   std::string out;
 
   // enough keys to force multiple resizes
