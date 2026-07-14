@@ -2,6 +2,7 @@
 #include "kv_store_arena.hpp"
 #include "kv_store_open.hpp"
 #include "locked_store.hpp"
+#include "sharded_store.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
@@ -300,10 +301,14 @@ int main(int argc, char *argv[]) {
             "trial,mops\n";
   }
 
-  run_threaded_bench<LockedStore<KVStoreOpen>>(
+  run_threaded_bench<LockedStore<KVStoreArena>>(
       "LockedStore", tcsv, value_length, 0, keys, values, lookup_order);
-  run_threaded_bench<LockedStore<KVStoreOpen>>(
+  run_threaded_bench<LockedStore<KVStoreArena>>(
       "LockedStore", tcsv, value_length, 10, keys, values, lookup_order);
+  run_threaded_bench<ShardedStore<KVStoreArena>>(
+      "ShardedStore", tcsv, value_length, 0, keys, values, lookup_order);
+  run_threaded_bench<ShardedStore<KVStoreArena>>(
+      "ShardedStore", tcsv, value_length, 10, keys, values, lookup_order);
 
   std::cout << "summary (median of " << TRIALS << " trials, Mops/s)\n";
   std::cout << "  " << std::left << std::setw(22) << "store" << std::right
