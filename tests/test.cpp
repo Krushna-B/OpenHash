@@ -1,54 +1,63 @@
-#include <iostream>
+#include <gtest/gtest.h>
 #include <string>
 
 #include "kv_store.hpp"
 
-// assert() is disabled in Release builds (NDEBUG), so use our own check
-#define CHECK(cond)                                                            \
-  do {                                                                         \
-    if (!(cond)) {                                                             \
-      std::cerr << "FAILED: " << #cond << " (line " << __LINE__ << ")\n";      \
-      return 1;                                                                \
-    }                                                                          \
-  } while (0)
-
-int main() {
-  KVStore store;
+TEST(KVStoreTest, SetGetRoundtrip) {
+  KVStore store(16);
   std::string out;
 
-  // set/get roundtrip
   store.set("dog", "woof");
-  CHECK(store.get("dog", out));
-  CHECK(out == "woof");
+  EXPECT_TRUE(store.get("dog", out));
+  EXPECT_EQ(out, "woof");
+}
 
-  // missing key
-  CHECK(!store.get("cat", out));
+TEST(KVStoreTest, MissingKey) {
+  KVStore store(16);
+  std::string out;
 
-  // overwrite, not duplicate
+  EXPECT_FALSE(store.get("cat", out));
+}
+
+TEST(KVStoreTest, OverwriteNotDuplicate) {
+  KVStore store(16);
+  std::string out;
+
+  store.set("dog", "woof");
   store.set("dog", "bark");
-  CHECK(store.get("dog", out));
-  CHECK(out == "bark");
-  CHECK(store.size() == 1);
+  EXPECT_TRUE(store.get("dog", out));
+  EXPECT_EQ(out, "bark");
+  EXPECT_EQ(store.size(), 1u);
+}
 
-  // del
-  CHECK(store.del("dog"));
-  CHECK(!store.get("dog", out));
-  CHECK(store.size() == 0);
+TEST(KVStoreTest, Delete) {
+  KVStore store(16);
+  std::string out;
 
-  // del on missing key
-  CHECK(!store.del("dog"));
+  store.set("dog", "woof");
+  EXPECT_TRUE(store.del("dog"));
+  EXPECT_FALSE(store.get("dog", out));
+  EXPECT_EQ(store.size(), 0u);
+}
 
-  // insert enough keys to force multiple resizes, everything stays retrievable
+TEST(KVStoreTest, DeleteMissing) {
+  KVStore store(16);
+
+  EXPECT_FALSE(store.del("dog"));
+}
+
+TEST(KVStoreTest, SurvivesResize) {
+  KVStore store(16);
+  std::string out;
+
+  // enough keys to force multiple resizes
   const int n = 1000;
   for (int i = 0; i < n; i++) {
     store.set("key" + std::to_string(i), "val" + std::to_string(i));
   }
-  CHECK(store.size() == n);
+  EXPECT_EQ(store.size(), static_cast<size_t>(n));
   for (int i = 0; i < n; i++) {
-    CHECK(store.get("key" + std::to_string(i), out));
-    CHECK(out == "val" + std::to_string(i));
+    ASSERT_TRUE(store.get("key" + std::to_string(i), out));
+    EXPECT_EQ(out, "val" + std::to_string(i));
   }
-
-  std::cout << "all tests passed\n";
-  return 0;
 }

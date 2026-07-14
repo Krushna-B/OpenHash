@@ -1,4 +1,0 @@
-/Users/krushna/Documents/Workspace/InMemory-Database/build/CMakeFiles/Tests.dir
-/Users/krushna/Documents/Workspace/InMemory-Database/build/CMakeFiles/Benchmark.dir
-/Users/krushna/Documents/Workspace/InMemory-Database/build/CMakeFiles/edit_cache.dir
-/Users/krushna/Documents/Workspace/InMemory-Database/build/CMakeFiles/rebuild_cache.dir

@@ -24,9 +24,43 @@ private:
   }
 
 public:
+  // Constructor
   explicit KVStore(size_t bucket_count) : buckets(bucket_count) {}
-  void set(const std::string &key, const std::string &value);
-  bool get(const std::string &key, std::string &out) const;
-  bool del(const std::string &key);
-  size_t size() const;
+
+  void set(const std::string &key, const std::string &value) {
+    size_t i = index_for(key);
+    for (auto &entry : buckets[i].entries) {
+      if (entry.key == key) {
+        entry.value = value;
+        return;
+      }
+    }
+    buckets[i].entries.push_back(Entry{key, value});
+    _size++;
+  }
+
+  bool get(const std::string &key, std::string &out) const {
+    size_t i = index_for(key);
+    for (auto &entry : buckets[i].entries) {
+      if (entry.key == key) {
+        out = entry.value;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool del(const std::string &key) {
+    size_t i = index_for(key);
+    for (auto it = buckets[i].entries.begin(); it != buckets[i].entries.end();
+         ++it) {
+      if (it->key == key) {
+        buckets[i].entries.erase(it);
+        _size--;
+        return true;
+      }
+    }
+    return false;
+  }
+  size_t size() const { return _size; };
 };

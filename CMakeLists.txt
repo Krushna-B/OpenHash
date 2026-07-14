@@ -25,6 +25,5 @@ target_compile_options(Benchmark PRIVATE -Wall -Wextra -O2 -g)
 #Target
 target_include_directories(Tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(Benchmark PRIVATE ${CMAKE_SOURCE_DIR}/src)
-
-#Linking
 target_link_libraries(Tests PRIVATE GTest::gtest_main)
+
