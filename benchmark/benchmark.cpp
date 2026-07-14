@@ -184,7 +184,7 @@ int main() {
             << std::setw(8) << "insert" << std::setw(8) << "get" << "\n";
   std::cout << "  " << std::left << std::setw(22)
             << "KVStoreOpen (continous memory array)" << std::right
-            << std::setw(8) << kvo.insert_mops << std::setw(8) << kv.get_mops
+            << std::setw(8) << kvo.insert_mops << std::setw(8) << kvo.get_mops
             << "\n";
   std::cout << "  " << std::left << std::setw(22) << "KVStore (chaining)"
             << std::right << std::setw(8) << kv.insert_mops << std::setw(8)
