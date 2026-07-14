@@ -17,7 +17,7 @@ const int NUM_KEYS = 1'000'000;
 const int NUM_GETS = 10'000'000;
 const int TRIALS = 5;
 const size_t INITIAL_BUCKETS = 2 << 18;
-const size_t STRING_LENGTH = 16;
+const size_t STRING_LENGTH = 64;
 const std::string charset =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 

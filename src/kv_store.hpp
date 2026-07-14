@@ -41,12 +41,11 @@ public:
       : buckets(bucket_count), _resize_threshold(_resize_threshold) {}
 
   void set(const std::string &key, const std::string &value) {
-    size_t i = index_for(key);
-
     // Resize
     if ((_size + 1.0) / buckets.size() > _resize_threshold) {
       resize();
     }
+    size_t i = index_for(key);
     for (auto &entry : buckets[i].entries) {
       if (entry.key == key) {
         entry.value = value;
