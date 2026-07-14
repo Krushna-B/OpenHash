@@ -1,4 +1,5 @@
 #include "kv_store.hpp"
+#include "kv_store_open.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
@@ -152,10 +153,39 @@ int main() {
     }
     return TrialResult{NUM_KEYS / insert_s / 1e6, NUM_GETS / get_s / 1e6};
   });
+  TrialResult kvo = run_bench("KVStoreOpen", [&] {
+    KVStoreOpen store(INITIAL_BUCKETS);
+
+    auto t0 = std::chrono::steady_clock::now();
+    for (const auto &key : keys) {
+      store.set(key, key);
+    }
+    double insert_s = seconds_since(t0);
+
+    std::string out;
+    size_t found = 0;
+    t0 = std::chrono::steady_clock::now();
+    for (uint32_t idx : lookup_order) {
+      if (store.get(keys[idx], out)) {
+        found++;
+      }
+    }
+    double get_s = seconds_since(t0);
+
+    if (found != static_cast<size_t>(NUM_GETS)) {
+      std::cerr << "BUG: only found " << found << " of " << NUM_GETS << "\n";
+      std::exit(1);
+    }
+    return TrialResult{NUM_KEYS / insert_s / 1e6, NUM_GETS / get_s / 1e6};
+  });
 
   std::cout << "summary (median of " << TRIALS << " trials, Mops/s)\n";
   std::cout << "  " << std::left << std::setw(22) << "store" << std::right
             << std::setw(8) << "insert" << std::setw(8) << "get" << "\n";
+  std::cout << "  " << std::left << std::setw(22)
+            << "KVStoreOpen (continous memory array)" << std::right
+            << std::setw(8) << kvo.insert_mops << std::setw(8) << kv.get_mops
+            << "\n";
   std::cout << "  " << std::left << std::setw(22) << "KVStore (chaining)"
             << std::right << std::setw(8) << kv.insert_mops << std::setw(8)
             << kv.get_mops << "\n";
