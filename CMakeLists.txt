@@ -23,9 +23,11 @@ add_executable(Benchmark benchmark/benchmark.cpp)
 
 #Compiler settings
 target_compile_options(Benchmark PRIVATE -Wall -Wextra -O2 -g)
+target_compile_options(Tests PRIVATE -Wall -Wextra -g -fsanitize=address)
 
 #Target
 target_include_directories(Tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(Benchmark PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(Tests PRIVATE GTest::gtest_main)
+target_link_options(Tests PRIVATE -fsanitize=address)
 

@@ -1,11 +1,12 @@
 #include "kv_store.hpp"
+#include "kv_store_arena.hpp"
 #include "kv_store_open.hpp"
 #include "gtest/gtest.h"
 #include <gtest/gtest.h>
 #include <string>
 
 template <typename T> class KVStoreTest : public testing::Test {};
-using StoreTypes = testing::Types<KVStore, KVStoreOpen>;
+using StoreTypes = testing::Types<KVStore, KVStoreOpen, KVStoreArena>;
 TYPED_TEST_SUITE(KVStoreTest, StoreTypes);
 
 TYPED_TEST(KVStoreTest, SetGetRoundtrip) {

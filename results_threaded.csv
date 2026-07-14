@@ -1,0 +1,9 @@
+store,key_len,value_len,num_keys,num_gets,threads,write_every,trial,mops
+LockedStore,64,64,1000000,10000000,1,0,median,3.74
+LockedStore,64,64,1000000,10000000,2,0,median,5.73
+LockedStore,64,64,1000000,10000000,4,0,median,4.06
+LockedStore,64,64,1000000,10000000,8,0,median,2.19
+LockedStore,64,64,1000000,10000000,1,10,median,3.74
+LockedStore,64,64,1000000,10000000,2,10,median,2.82
+LockedStore,64,64,1000000,10000000,4,10,median,2.04
+LockedStore,64,64,1000000,10000000,8,10,median,1.06
