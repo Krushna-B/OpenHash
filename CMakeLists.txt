@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.23)
 
 project(FlashKV VERSION 1.0.0 LANGUAGES CXX)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 #External Deps
 include(FetchContent)
 FetchContent_Declare(
