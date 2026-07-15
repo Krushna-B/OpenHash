@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
-FIGDIR = ROOT / "figures"
+FIGDIR = ROOT / "newfigures"
 
 # color follows the entity, in every figure (dataviz palette, fixed order)
 COLORS = {
@@ -173,7 +173,65 @@ def _fig_working_set_one(sweep, vlen):
     save(fig, f"working_set_staircase_v{vlen}")
 
 
-def fig_thread_scaling(path):
+def fig_matrix(df, metric):
+    """Small multiples: rows = value size, cols = key count, bars = stores."""
+    from matplotlib.patches import Patch
+
+    keys_list = sorted(df["num_keys"].unique())
+    vlens = sorted(df["value_len"].unique())
+    if len(keys_list) < 2 or len(vlens) < 2:
+        print("  (skipping matrix figure: need multiple key counts AND value sizes)")
+        return
+
+    fig, axes = plt.subplots(
+        len(vlens),
+        len(keys_list),
+        figsize=(2.3 * len(keys_list) + 0.8, 1.9 * len(vlens) + 0.9),
+        sharey="col",
+        squeeze=False,
+    )
+
+    for r, vlen in enumerate(vlens):
+        for c, nk in enumerate(keys_list):
+            ax = axes[r][c]
+            cfg = df[(df["value_len"] == vlen) & (df["num_keys"] == nk)]
+            stores = [s for s in STORE_ORDER if s in cfg["store"].unique()]
+            for i, s in enumerate(stores):
+                g = cfg[cfg["store"] == s][metric]
+                med = g.median()
+                ax.bar(i, med, width=0.7, color=COLORS[s], zorder=3)
+                ax.errorbar(
+                    i,
+                    med,
+                    yerr=[[med - g.min()], [g.max() - med]],
+                    fmt="none",
+                    ecolor=INK,
+                    elinewidth=0.8,
+                    capsize=2,
+                    zorder=4,
+                )
+            ax.set_xticks([])
+            style_axis(ax)
+            if r == 0:
+                ax.set_title(f"{nk:,} keys", fontsize=9.5, color=INK)
+            if c == 0:
+                ax.set_ylabel(f"{vlen}B values\nMops/s", fontsize=9)
+
+    handles = [Patch(color=COLORS[s], label=LABELS[s]) for s in STORE_ORDER]
+    fig.legend(handles=handles, ncol=4, loc="lower center", bbox_to_anchor=(0.5, -0.04))
+    op = metric.split("_")[0]
+    fig.suptitle(
+        f"{op} throughput across workloads (median, whiskers = min–max)",
+        x=0.01,
+        ha="left",
+        fontsize=9.5,
+        color=MUTED,
+    )
+    fig.tight_layout(rect=(0, 0.03, 1, 0.97))
+    save(fig, f"matrix_{op}")
+
+
+def fig_thread_scaling(path, baselines={}):
     """Threads vs throughput: global lock vs sharded, read-only vs mixed."""
     if not path.exists():
         print(
@@ -183,11 +241,21 @@ def fig_thread_scaling(path):
         return
     tdf = pd.read_csv(path)
     for vlen, df in tdf.groupby("value_len"):
-        _fig_thread_scaling_one(df, vlen)
+        _fig_thread_scaling_one(df, vlen, baselines.get(vlen))
 
 
-def _fig_thread_scaling_one(df, vlen):
+def _fig_thread_scaling_one(df, vlen, baseline):
     fig, ax = plt.subplots(figsize=(6.4, 3.6))
+    if baseline:
+        ax.axhline(baseline, color=MUTED, linewidth=1, linestyle=(0, (2, 2)), zorder=1)
+        ax.text(
+            1,
+            baseline * 1.04,
+            "fastest single-threaded store (no lock)",
+            fontsize=8,
+            color=MUTED,
+            va="bottom",
+        )
     for store in ["LockedStore", "ShardedStore"]:
         for we, dash, suffix in [
             (0, "-", "read-only"),
@@ -224,6 +292,57 @@ def _fig_thread_scaling_one(df, vlen):
     ax.set_ylabel("throughput (Mops/s)")
     style_axis(ax)
     save(fig, f"thread_scaling_v{vlen}")
+
+
+def fig_concurrent_bars(df, tpath):
+    """Single-threaded stores vs concurrent wrappers at their best thread
+    count, one bar figure per value size. Hatched = 10% writes."""
+    if not tpath.exists():
+        print("  (skipping concurrent-bars figure: no results_threaded.csv)")
+        return
+    tdf = pd.read_csv(tpath)
+
+    for vlen in sorted(set(tdf["value_len"]) & set(df["value_len"])):
+        single = df[(df["num_keys"] == 1_000_000) & (df["value_len"] == vlen)]
+        th = tdf[tdf["value_len"] == vlen]
+        if single.empty or th.empty:
+            continue
+
+        # (label, mops, color, hatch, annotation)
+        bars = []
+        for s in STORE_ORDER:
+            g = single[single["store"] == s]["get_mops"]
+            if not g.empty:
+                bars.append((LABELS[s], g.median(), COLORS[s], None, "1 thread"))
+        for st in ["LockedStore", "ShardedStore"]:
+            for we, suffix, hatch in [(0, "read-only", None),
+                                      (10, "10% writes", "//")]:
+                d = th[(th["store"] == st) & (th["write_every"] == we)]
+                if d.empty:
+                    continue
+                g = d.groupby("threads")["mops"].median()
+                t = g.idxmax()
+                bars.append((f"{LABELS[st]}\n{suffix}", g.max(), COLORS[st],
+                             hatch, f"{t} thread{'s' if t > 1 else ''}"))
+
+        fig, ax = plt.subplots(figsize=(8.8, 3.4))
+        for i, (label, mops, color, hatch, note) in enumerate(bars):
+            ax.bar(i, mops, width=0.66, color=color, hatch=hatch,
+                   edgecolor="white" if hatch else color, linewidth=0.5,
+                   zorder=3)
+            ax.text(i, mops + 0.15, f"{mops:.1f}", ha="center", va="bottom",
+                    fontsize=9, color=INK)
+        ax.set_xticks(range(len(bars)))
+        ax.set_xticklabels(
+            [f"{b[0].replace('std::', '')}\n{b[4]}" for b in bars],
+            fontsize=8)
+        ax.set_ylabel("get throughput (Mops/s)")
+        fig.suptitle(
+            f"1M keys, {vlen}B values — single-threaded stores vs concurrent "
+            "wrappers at their best thread count", x=0.01, ha="left",
+            fontsize=9, color=MUTED)
+        style_axis(ax)
+        save(fig, f"concurrent_vs_single_v{vlen}")
 
 
 def fig_hierarchy(path):
@@ -280,14 +399,24 @@ def fig_hierarchy(path):
 
 def main():
     results = ROOT / "results.csv"
+    baselines = {}
     if results.exists():
         df = pd.read_csv(results)
         print(f"loaded {len(df)} rows from results.csv")
         fig_single_thread(df[df["num_keys"] == 1_000_000])
         fig_working_set(df)
+        fig_matrix(df, "get_mops")
+        fig_matrix(df, "insert_mops")
+        big = df[df["num_keys"] == 1_000_000]
+        baselines = {
+            v: g.groupby("store")["get_mops"].median().max()
+            for v, g in big.groupby("value_len")
+        }
     else:
         print("  (skipping single-thread + working-set figures: no results.csv)")
-    fig_thread_scaling(ROOT / "results_threaded.csv")
+    fig_thread_scaling(ROOT / "results_threaded.csv", baselines)
+    if results.exists():
+        fig_concurrent_bars(df, ROOT / "results_threaded.csv")
     fig_hierarchy(ROOT / "results_hierarchy.csv")
 
 

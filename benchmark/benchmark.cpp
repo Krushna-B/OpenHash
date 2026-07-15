@@ -231,10 +231,13 @@ int main(int argc, char *argv[]) {
     }
     double insert_s = seconds_since(t0);
 
+    std::string out;
     size_t found = 0;
     t0 = std::chrono::steady_clock::now();
     for (uint32_t idx : lookup_order) {
-      if (map.find(keys[idx]) != map.end()) {
+      auto it = map.find(keys[idx]);
+      if (it != map.end()) {
+        out = it->second;
         found++;
       }
     }
@@ -307,13 +310,13 @@ int main(int argc, char *argv[]) {
               "trial,mops\n";
     }
 
-    run_threaded_bench<LockedStore<KVStoreArena>>(
+    run_threaded_bench<LockedStore<KVStoreOpen>>(
         "LockedStore", tcsv, value_length, 0, keys, values, lookup_order);
-    run_threaded_bench<LockedStore<KVStoreArena>>(
+    run_threaded_bench<LockedStore<KVStoreOpen>>(
         "LockedStore", tcsv, value_length, 10, keys, values, lookup_order);
-    run_threaded_bench<ShardedStore<KVStoreArena>>(
+    run_threaded_bench<ShardedStore<KVStoreOpen>>(
         "ShardedStore", tcsv, value_length, 0, keys, values, lookup_order);
-    run_threaded_bench<ShardedStore<KVStoreArena>>(
+    run_threaded_bench<ShardedStore<KVStoreOpen>>(
         "ShardedStore", tcsv, value_length, 10, keys, values, lookup_order);
   }
 
