@@ -20,9 +20,12 @@ set(CMAKE_CXX_STANDARD 20) #C++ 20
 # add_executable(FlashKV src/main.cpp)
 add_executable(Tests tests/test.cpp)
 add_executable(Benchmark benchmark/benchmark.cpp)
+add_executable(Hierarchy benchmark/hierarchy.cpp)
 
 #Compiler settings
 target_compile_options(Benchmark PRIVATE -Wall -Wextra -O2 -g)
+target_compile_options(Hierarchy PRIVATE -Wall -Wextra -O2 -g)
+target_include_directories(Hierarchy PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_compile_options(Tests PRIVATE -Wall -Wextra -g -fsanitize=address)
 
 #Target

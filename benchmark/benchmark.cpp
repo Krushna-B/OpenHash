@@ -18,11 +18,11 @@
 #include <vector>
 
 const int SEED = 42;
-const int NUM_KEYS = 1'000'000;
+int NUM_KEYS = 1'000'000; // overridable via argv[2]
 const int NUM_GETS = 10'000'000;
 const int TRIALS = 5;
-const size_t INITIAL_BUCKETS = 2 << 18;
-const size_t KEY_LENGTH = 64;
+size_t INITIAL_BUCKETS = 2 << 18; // recomputed from NUM_KEYS in main
+const size_t KEY_LENGTH = 16;
 const std::string charset =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -90,8 +90,8 @@ TrialResult run_bench(const std::string &label, std::ofstream &csv,
               << r.insert_mops << "  get " << std::setw(6) << r.get_mops
               << "\n";
     csv << label << ',' << KEY_LENGTH << ',' << value_length << ',' << NUM_KEYS
-        << ',' << NUM_GETS << ',' << t << ',' << r.insert_mops << ','
-        << r.get_mops << '\n';
+        << ',' << NUM_GETS << ',' << INITIAL_BUCKETS << ',' << t << ','
+        << r.insert_mops << ',' << r.get_mops << '\n';
   }
 
   TrialResult med{median(insert_mops), median(get_mops)};
@@ -168,13 +168,18 @@ void run_threaded_bench(const std::string &label, std::ofstream &csv,
 
 int main(int argc, char *argv[]) {
   size_t value_length = (argc > 1) ? std::stoul(argv[1]) : 64;
+  if (argc > 2) {
+    NUM_KEYS = std::stoi(argv[2]);
+  }
+  INITIAL_BUCKETS = static_cast<size_t>(NUM_KEYS) * 2;
+  bool run_threads = (argc > 3 && std::string(argv[3]) == "threads");
   std::cout << std::fixed << std::setprecision(2);
 
   std::ofstream csv("results.csv", std::ios::app);
   csv << std::fixed << std::setprecision(2);
   if (csv.tellp() == 0) {
-    csv << "store,key_len,value_len,num_keys,num_gets,trial,insert_mops,get_"
-           "mops\n";
+    csv << "store,key_len,value_len,num_keys,num_gets,slots,trial,insert_mops,"
+           "get_mops\n";
   }
 
   // Setup: all randomness generated before any clock starts
@@ -294,21 +299,23 @@ int main(int argc, char *argv[]) {
     return TrialResult{NUM_KEYS / insert_s / 1e6, NUM_GETS / get_s / 1e6};
   });
 
-  std::ofstream tcsv("results_threaded.csv", std::ios::app);
-  tcsv << std::fixed << std::setprecision(2);
-  if (tcsv.tellp() == 0) {
-    tcsv << "store,key_len,value_len,num_keys,num_gets,threads,write_every,"
-            "trial,mops\n";
-  }
+  if (run_threads) {
+    std::ofstream tcsv("results_threaded.csv", std::ios::app);
+    tcsv << std::fixed << std::setprecision(2);
+    if (tcsv.tellp() == 0) {
+      tcsv << "store,key_len,value_len,num_keys,num_gets,threads,write_every,"
+              "trial,mops\n";
+    }
 
-  run_threaded_bench<LockedStore<KVStoreArena>>(
-      "LockedStore", tcsv, value_length, 0, keys, values, lookup_order);
-  run_threaded_bench<LockedStore<KVStoreArena>>(
-      "LockedStore", tcsv, value_length, 10, keys, values, lookup_order);
-  run_threaded_bench<ShardedStore<KVStoreArena>>(
-      "ShardedStore", tcsv, value_length, 0, keys, values, lookup_order);
-  run_threaded_bench<ShardedStore<KVStoreArena>>(
-      "ShardedStore", tcsv, value_length, 10, keys, values, lookup_order);
+    run_threaded_bench<LockedStore<KVStoreArena>>(
+        "LockedStore", tcsv, value_length, 0, keys, values, lookup_order);
+    run_threaded_bench<LockedStore<KVStoreArena>>(
+        "LockedStore", tcsv, value_length, 10, keys, values, lookup_order);
+    run_threaded_bench<ShardedStore<KVStoreArena>>(
+        "ShardedStore", tcsv, value_length, 0, keys, values, lookup_order);
+    run_threaded_bench<ShardedStore<KVStoreArena>>(
+        "ShardedStore", tcsv, value_length, 10, keys, values, lookup_order);
+  }
 
   std::cout << "summary (median of " << TRIALS << " trials, Mops/s)\n";
   std::cout << "  " << std::left << std::setw(22) << "store" << std::right
