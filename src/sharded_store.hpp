@@ -10,7 +10,7 @@ template <typename Store, size_t NUM_SHARDS = 16> class ShardedStore {
   // bytes typically on ARM
   // TODO: Test this with other byte sizes to see if it makes a difference and
   // by how much
-  struct alignas(64) Shard {
+  struct alignas(128) Shard {
     Store store;
     mutable std::shared_mutex mutex;
     explicit Shard(size_t n) : store(n) {}

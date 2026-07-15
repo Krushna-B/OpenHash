@@ -120,10 +120,14 @@ def fig_single_thread(df):
 
 
 def fig_working_set(df):
-    """Get throughput vs key count (log x): the memory-hierarchy staircase."""
-    sweep = df
+    """Get throughput vs key count (log x), one figure per value size."""
+    for vlen, sweep in df.groupby("value_len"):
+        _fig_working_set_one(sweep, vlen)
+
+
+def _fig_working_set_one(sweep, vlen):
     if sweep["num_keys"].nunique() < 3:
-        print("  (skipping working-set figure: need a num_keys sweep)")
+        print(f"  (skipping working-set figure v{vlen}: need a num_keys sweep)")
         return
 
     fig, ax = plt.subplots(figsize=(6.4, 3.6))
@@ -166,7 +170,7 @@ def fig_working_set(df):
             n, ax.get_ylim()[1] * 0.97, f" {label}", fontsize=8, color=MUTED, va="top"
         )
 
-    save(fig, "working_set_staircase")
+    save(fig, f"working_set_staircase_v{vlen}")
 
 
 def fig_thread_scaling(path):
@@ -177,8 +181,12 @@ def fig_thread_scaling(path):
             "run ./build/Benchmark 64 1000000 threads)"
         )
         return
-    df = pd.read_csv(path)
+    tdf = pd.read_csv(path)
+    for vlen, df in tdf.groupby("value_len"):
+        _fig_thread_scaling_one(df, vlen)
 
+
+def _fig_thread_scaling_one(df, vlen):
     fig, ax = plt.subplots(figsize=(6.4, 3.6))
     for store in ["LockedStore", "ShardedStore"]:
         for we, dash, suffix in [
@@ -215,14 +223,16 @@ def fig_thread_scaling(path):
     ax.set_xlabel("threads")
     ax.set_ylabel("throughput (Mops/s)")
     style_axis(ax)
-    save(fig, "thread_scaling")
+    save(fig, f"thread_scaling_v{vlen}")
 
 
 def fig_hierarchy(path):
     """ns per get vs working-set bytes: latency (chase) vs throughput cost."""
     if not path.exists():
-        print("  (skipping hierarchy figure: no results_hierarchy.csv — "
-              "run ./build/Hierarchy)")
+        print(
+            "  (skipping hierarchy figure: no results_hierarchy.csv — "
+            "run ./build/Hierarchy)"
+        )
         return
     df = pd.read_csv(path)
 
@@ -233,10 +243,19 @@ def fig_hierarchy(path):
     ]
     for col, color, label in series:
         g = df.groupby("bytes")[col].agg(["median", "min", "max"])
-        ax.plot(g.index, g["median"], color=color, linewidth=2, marker="o",
-                markersize=4, label=label, zorder=3)
-        ax.fill_between(g.index, g["min"], g["max"], color=color, alpha=0.15,
-                        linewidth=0, zorder=2)
+        ax.plot(
+            g.index,
+            g["median"],
+            color=color,
+            linewidth=2,
+            marker="o",
+            markersize=4,
+            label=label,
+            zorder=3,
+        )
+        ax.fill_between(
+            g.index, g["min"], g["max"], color=color, alpha=0.15, linewidth=0, zorder=2
+        )
 
     ax.set_xscale("log", base=2)
     ax.set_yscale("log")
@@ -252,8 +271,9 @@ def fig_hierarchy(path):
 
     for x, label in [(128 << 10, "L1d"), (16 << 20, "L2")]:
         ax.axvline(x, color=BASELINE, linewidth=0.8, linestyle=(0, (4, 3)))
-        ax.text(x, ax.get_ylim()[1] * 0.92, f" {label}", fontsize=8,
-                color=MUTED, va="top")
+        ax.text(
+            x, ax.get_ylim()[1] * 0.92, f" {label}", fontsize=8, color=MUTED, va="top"
+        )
 
     save(fig, "memory_hierarchy")
 
