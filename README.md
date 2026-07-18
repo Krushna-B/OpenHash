@@ -1,4 +1,4 @@
-# FlashKV
+# OpenHash
 
 A from-scratch, header-only hash table in modern C++20, built one measured decision at a time.
 
