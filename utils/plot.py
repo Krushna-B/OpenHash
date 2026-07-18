@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
-FIGDIR = ROOT / "newfigures"
+FIGDIR = ROOT / "figures"
 
 # color follows the entity, in every figure (dataviz palette, fixed order)
 COLORS = {
